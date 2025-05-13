@@ -1,0 +1,91 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#define SIZE 5
+void prepareMatrix(char *key, char matrix[SIZE][SIZE]);
+void preprocessText(char *text, char *processedText);
+void playfairDecrypt(char *cipherText, char matrix[SIZE][SIZE], char *plainText);
+void printMatrix(char matrix[SIZE][SIZE]);
+int main() {
+    char key[] = "YOURKEYHERE"; 
+    char cipherText[] = "KXJEY UREBE ZWEHE WRYTU HEYFS KREHE GOYFI WTTTU OLKSY CAJPO BOTEI ZONTX BYBNT GONEY CUZWR GDSON SXBOU YWRHE BAAHY USEDQ";
+    char matrix[SIZE][SIZE];
+    char processedText[1000];
+    char plainText[1000];
+    prepareMatrix(key, matrix);
+    preprocessText(cipherText, processedText);
+    playfairDecrypt(processedText, matrix, plainText);
+    printf("Playfair Matrix:\n");
+    printMatrix(matrix);
+    printf("Decrypted Text: %s\n", plainText);
+    return 0;
+}
+void prepareMatrix(char *key, char matrix[SIZE][SIZE]) {
+    int used[26] = {0}; // To keep track of letters used
+    int k = 0;
+    for (int i = 0; key[i]; i++) {
+        char c = toupper(key[i]);
+        if (c >= 'A' && c <= 'Z' && c != 'J' && !used[c - 'A']) {
+            matrix[k / SIZE][k % SIZE] = c;
+            used[c - 'A'] = 1;
+            k++;
+        }
+    }
+    for (int i = 0; i < 26; i++) {
+        if (!used[i] && i != ('J' - 'A')) {
+            matrix[k / SIZE][k % SIZE] = i + 'A';
+            k++;
+        }
+    }
+}
+void preprocessText(char *text, char *processedText) {
+    int j = 0;
+    
+    for (int i = 0; text[i]; i++) {
+        if (text[i] != ' ') {
+            processedText[j++] = toupper(text[i]);
+        }
+    }
+    processedText[j] = '\0';
+}
+void playfairDecrypt(char *cipherText, char matrix[SIZE][SIZE], char *plainText) {
+    int pos1, pos2;
+    char a, b;
+    int j = 0;
+    for (int i = 0; cipherText[i]; i += 2) {
+        a = cipherText[i];
+        b = cipherText[i + 1];
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (matrix[row][col] == a) {
+                    pos1 = row;
+                    pos2 = col;
+                }
+                if (matrix[row][col] == b) {
+                    pos1 = row;
+                    pos2 = col;
+                }
+            }
+        }
+        if (pos1 == pos2) {
+            plainText[j++] = matrix[pos1][(pos2 + SIZE - 1) % SIZE];
+            plainText[j++] = matrix[pos1][(pos2 + 1) % SIZE];
+        } else if (pos1 == pos2) {
+            plainText[j++] = matrix[(pos1 + SIZE - 1) % SIZE][pos2];
+            plainText[j++] = matrix[(pos1 + 1) % SIZE][pos2];
+        } else {
+            plainText[j++] = matrix[pos1][pos2];
+            plainText[j++] = matrix[pos1][pos2];
+        }
+    }
+    plainText[j] = '\0';
+}
+void printMatrix(char matrix[SIZE][SIZE]) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            printf("%c ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
