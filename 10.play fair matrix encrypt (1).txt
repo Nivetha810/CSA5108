@@ -1,0 +1,97 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#define SIZE 5
+void prepareMatrix(char matrix[SIZE][SIZE]);
+void preprocessText(const char *text, char *processedText);
+void playfairEncrypt(const char *text, char matrix[SIZE][SIZE], char *cipherText);
+void printMatrix(char matrix[SIZE][SIZE]);
+int main() {
+    char matrix[SIZE][SIZE];
+    char message[] = "Must see you over Cadogan West. Coming at once.";
+    char processedText[1000];
+    char cipherText[1000];
+    prepareMatrix(matrix);
+    preprocessText(message, processedText);
+    playfairEncrypt(processedText, matrix, cipherText);
+    printf("Playfair Matrix:\n");
+    printMatrix(matrix);
+    printf("Cipher Text: %s\n", cipherText);
+    return 0;
+}
+void prepareMatrix(char matrix[SIZE][SIZE]) {
+    char matrixContent[] = "MFHIK UNOPQ ZVWXY ELARG DSTBC";
+    int k = 0;
+    for (int i = 0; i < sizeof(matrixContent) - 1; i++) {
+        if (matrixContent[i] != ' ') {
+            matrix[k / SIZE][k % SIZE] = matrixContent[i];
+            k++;
+        }
+    }
+}
+void preprocessText(const char *text, char *processedText) {
+    int j = 0;
+    for (int i = 0; text[i]; i++) {
+        char c = toupper(text[i]);
+        
+        if (c == 'J') c = 'I';  
+        
+        if (c >= 'A' && c <= 'Z') {
+            processedText[j++] = c;
+        }
+    }
+    for (int i = 0; i < j - 1; i++) {
+        if (processedText[i] == processedText[i + 1]) {
+            for (int k = j; k > i + 1; k--) {
+                processedText[k + 1] = processedText[k];
+            }
+            processedText[i + 1] = 'X';  
+            j++;
+        }
+    }
+    
+    if (j % 2 != 0) {
+        processedText[j++] = 'X';  
+    }
+    processedText[j] = '\0';
+}
+void playfairEncrypt(const char *text, char matrix[SIZE][SIZE], char *cipherText) {
+    int row1, col1, row2, col2;
+    int j = 0;
+    for (int i = 0; text[i]; i += 2) {
+        char a = text[i];
+        char b = text[i + 1];
+        for (row1 = 0; row1 < SIZE; row1++) {
+            for (col1 = 0; col1 < SIZE; col1++) {
+                if (matrix[row1][col1] == a) break;
+            }
+            if (col1 < SIZE) break;
+        }
+        for (row2 = 0; row2 < SIZE; row2++) {
+            for (col2 = 0; col2 < SIZE; col2++) {
+                if (matrix[row2][col2] == b) break;
+            }
+            if (col2 < SIZE) break;
+        }
+        if (row1 == row2) {
+            cipherText[j++] = matrix[row1][(col1 + 1) % SIZE];
+            cipherText[j++] = matrix[row2][(col2 + 1) % SIZE];
+        } else if (col1 == col2) {
+            cipherText[j++] = matrix[(row1 + 1) % SIZE][col1];
+            cipherText[j++] = matrix[(row2 + 1) % SIZE][col2];
+        } else {
+            cipherText[j++] = matrix[row1][col2];
+            cipherText[j++] = matrix[row2][col1];
+        }
+    }
+    cipherText[j] = '\0';
+}
+void printMatrix(char matrix[SIZE][SIZE]) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            printf("%c ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
