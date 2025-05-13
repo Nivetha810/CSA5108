@@ -1,0 +1,86 @@
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#define BLOCK_SIZE 64 
+void pad_plaintext(uint8_t *plaintext, int *length);
+void triple_des_encrypt_ecb(uint8_t *plaintext, int length, uint64_t keys[3], uint8_t *ciphertext);
+void triple_des_encrypt_cbc(uint8_t *plaintext, int length, uint64_t keys[3], uint64_t iv, uint8_t *ciphertext);
+void triple_des_encrypt_cfb(uint8_t *plaintext, int length, uint64_t keys[3], uint64_t iv, uint8_t *ciphertext);
+uint64_t des_encrypt(uint64_t block, uint64_t key);
+uint64_t xor_blocks(uint64_t a, uint64_t b);
+uint64_t des_encrypt(uint64_t block, uint64_t key) {
+    return block ^ key;
+}
+uint64_t xor_blocks(uint64_t a, uint64_t b) {
+    return a ^ b;
+}
+void pad_plaintext(uint8_t *plaintext, int *length) {
+    int padding_needed = BLOCK_SIZE - (*length % BLOCK_SIZE);
+    plaintext[*length] = 0x80; 
+    for (int i = 1; i < padding_needed; i++) {
+        plaintext[*length + i] = 0x00; 
+    }
+    
+    *length += padding_needed;
+}
+void triple_des_encrypt_ecb(uint8_t *plaintext, int length, uint64_t keys[3], uint8_t *ciphertext) {
+    for (int i = 0; i < length; i += 8) {
+        uint64_t block = *(uint64_t *)(plaintext + i);
+        block = des_encrypt(block, keys[0]);
+        block = des_encrypt(block, keys[1]);
+        block = des_encrypt(block, keys[2]);
+        *(uint64_t *)(ciphertext + i) = block;
+    }
+}
+void triple_des_encrypt_cbc(uint8_t *plaintext, int length, uint64_t keys[3], uint64_t iv, uint8_t *ciphertext) {
+    uint64_t previous = iv;
+    for (int i = 0; i < length; i += 8) {
+        uint64_t block = *(uint64_t *)(plaintext + i);
+        block = xor_blocks(block, previous);
+        block = des_encrypt(block, keys[0]);
+        block = des_encrypt(block, keys[1]);
+        block = des_encrypt(block, keys[2]);
+        *(uint64_t *)(ciphertext + i) = block;
+        previous = block;
+    }
+}
+void triple_des_encrypt_cfb(uint8_t *plaintext, int length, uint64_t keys[3], uint64_t iv, uint8_t *ciphertext) {
+    uint64_t shift_register = iv;
+    for (int i = 0; i < length; i += 8) {
+        uint64_t encrypted_shift_register = des_encrypt(shift_register, keys[0]);
+        encrypted_shift_register = des_encrypt(encrypted_shift_register, keys[1]);
+        encrypted_shift_register = des_encrypt(encrypted_shift_register, keys[2]);
+        uint64_t block = *(uint64_t *)(plaintext + i);
+        uint64_t ciphertext_block = xor_blocks(block, encrypted_shift_register);
+        *(uint64_t *)(ciphertext + i) = ciphertext_block;
+        shift_register = ciphertext_block;
+    }
+}
+
+int main() {
+    uint8_t plaintext[] = "This is a message";
+    int plaintext_length = strlen((char *)plaintext);
+    uint64_t keys[3] = {0x133457799BBCDFF1, 0x1122334455667788, 0xAABBCCDDEEFF0011};
+    uint64_t iv = 0x1234567890ABCDEF;
+    pad_plaintext(plaintext, &plaintext_length);
+    uint8_t ciphertext_ecb[128], ciphertext_cbc[128], ciphertext_cfb[128];
+    triple_des_encrypt_ecb(plaintext, plaintext_length, keys, ciphertext_ecb);
+    triple_des_encrypt_cbc(plaintext, plaintext_length, keys, iv, ciphertext_cbc);
+    triple_des_encrypt_cfb(plaintext, plaintext_length, keys, iv, ciphertext_cfb);
+    printf("ECB Mode Ciphertext:\n");
+    for (int i = 0; i < plaintext_length; i++) {
+        printf("%02X ", ciphertext_ecb[i]);
+    }
+    printf("\n\nCBC Mode Ciphertext:\n");
+    for (int i = 0; i < plaintext_length; i++) {
+        printf("%02X ", ciphertext_cbc[i]);
+    }
+    printf("\n\nCFB Mode Ciphertext:\n");
+    for (int i = 0; i < plaintext_length; i++) {
+        printf("%02X ", ciphertext_cfb[i]);
+    }
+    printf("\n");
+
+    return 0;
+}
