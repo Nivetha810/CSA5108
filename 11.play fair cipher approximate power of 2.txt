@@ -1,0 +1,22 @@
+#include <stdio.h>
+#include <math.h>
+unsigned long long factorial(int n) {
+    unsigned long long result = 1;
+    for (int i = 1; i <= n; i++) {
+        result *= i;
+    }
+    return result;
+}
+double approximatePowerOf2(unsigned long long num) {
+    return log2(num);
+}
+int main() {
+    int n = 25;
+    unsigned long long fact = factorial(n);
+    double power_of_2 = approximatePowerOf2(fact);
+    printf("Number of possible Playfair keys (25!): %llu\n", fact);
+    printf("Approximate power of 2: 2^%.0f\n", power_of_2);
+    printf("\nNote: Calculating the number of effectively unique keys considering matrix symmetries and permutations requires advanced combinatorial analysis.\n");
+    printf("For simplicity, the unique key calculation is not implemented here.\n");
+    return 0;
+}
