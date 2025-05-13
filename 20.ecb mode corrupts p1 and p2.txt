@@ -1,0 +1,54 @@
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+void triple_des_encrypt_ecb(uint64_t plaintext[], uint64_t keys[3], uint64_t ciphertext[], int n);
+void triple_des_encrypt_cbc(uint64_t plaintext[], uint64_t keys[3], uint64_t iv, uint64_t ciphertext[], int n);
+uint64_t des_encrypt(uint64_t block, uint64_t key);
+uint64_t xor_blocks(uint64_t a, uint64_t b);
+uint64_t des_encrypt(uint64_t block, uint64_t key) {
+    return block ^ key;
+}
+uint64_t xor_blocks(uint64_t a, uint64_t b) {
+    return a ^ b;
+}
+void triple_des_encrypt_ecb(uint64_t plaintext[], uint64_t keys[3], uint64_t ciphertext[], int n) {
+    for (int i = 0; i < n; i++) {
+        uint64_t block = des_encrypt(plaintext[i], keys[0]);
+        block = des_encrypt(block, keys[1]);
+        block = des_encrypt(block, keys[2]);
+        ciphertext[i] = block;
+    }
+}
+void triple_des_encrypt_cbc(uint64_t plaintext[], uint64_t keys[3], uint64_t iv, uint64_t ciphertext[], int n) {
+    uint64_t previous = iv;
+    for (int i = 0; i < n; i++) {
+        uint64_t block = xor_blocks(plaintext[i], previous);
+        block = des_encrypt(block, keys[0]);
+        block = des_encrypt(block, keys[1]);
+        block = des_encrypt(block, keys[2]);
+        ciphertext[i] = block;
+        previous = block;  
+    }
+}
+
+int main() {
+    uint64_t plaintext[] = {0x0123456789ABCDEF, 0xFEDCBA9876543210};
+    uint64_t keys[3] = {0x133457799BBCDFF1, 0x1122334455667788, 0xAABBCCDDEEFF0011};
+    uint64_t iv = 0x1234567890ABCDEF;
+    uint64_t ciphertext_ecb[2], ciphertext_cbc[2];
+    triple_des_encrypt_ecb(plaintext, keys, ciphertext_ecb, 2);
+    triple_des_encrypt_cbc(plaintext, keys, iv, ciphertext_cbc, 2);
+    printf("ECB Mode Encryption:\n");
+    for (int i = 0; i < 2; i++) {
+        printf("Plaintext Block %d:  %016llX\n", i + 1, plaintext[i]);
+        printf("Ciphertext Block %d: %016llX\n", i + 1, ciphertext_ecb[i]);
+    }
+    printf("\nCBC Mode Encryption:\n");
+    for (int i = 0; i < 2; i++) {
+        printf("Plaintext Block %d:  %016llX\n", i + 1, plaintext[i]);
+        printf("Ciphertext Block %d: %016llX\n", i + 1, ciphertext_cbc[i]);
+    }
+
+    return 0;
+}
