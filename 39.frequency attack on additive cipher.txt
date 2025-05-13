@@ -1,0 +1,116 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ALPHABET_SIZE 26
+
+const double english_freq[ALPHABET_SIZE] = {
+    8.12,  
+    1.49, 
+    2.71,  
+    4.32,  
+    12.02, 
+    2.30,  
+    2.03, 
+    5.92, 
+    7.31,  
+    0.10, 
+    0.69, 
+    3.98, 
+    2.61, 
+    6.95,  
+    7.68, 
+    1.82,  
+    0.11, 
+    6.02,  
+    6.28,  
+    9.10, 
+    2.88,  
+    1.11, 
+    2.09,  
+    0.17,  
+    2.11,  
+    0.07   
+};
+
+void count_frequency(const char* ciphertext, double freq[]) {
+    int total_letters = 0;
+
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = 0;
+    }
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        char c = ciphertext[i];
+        if (c >= 'A' && c <= 'Z') {
+            freq[c - 'A']++;
+            total_letters++;
+        } else if (c >= 'a' && c <= 'z') {
+            freq[c - 'a']++;
+            total_letters++;
+        }
+    }
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i] = (freq[i] / total_letters) * 100;
+    }
+}
+double calculate_score(double cipher_freq[], const double english_freq[]) {
+    double score = 0;
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        score += (cipher_freq[i] - english_freq[i]) * (cipher_freq[i] - english_freq[i]);
+    }
+    return score;
+}
+void decrypt_with_shift(const char* ciphertext, int shift, char* plaintext) {
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        char c = ciphertext[i];
+        if (c >= 'A' && c <= 'Z') {
+            plaintext[i] = ((c - 'A' - shift + ALPHABET_SIZE) % ALPHABET_SIZE) + 'A';
+        } else if (c >= 'a' && c <= 'z') {
+            plaintext[i] = ((c - 'a' - shift + ALPHABET_SIZE) % ALPHABET_SIZE) + 'a';
+        } else {
+            plaintext[i] = c; 
+        }
+    }
+    plaintext[strlen(ciphertext)] = '\0';  
+}
+void frequency_attack(const char* ciphertext, int top_n) {
+    double cipher_freq[ALPHABET_SIZE];
+    double shift_scores[ALPHABET_SIZE];
+    char possible_plaintexts[ALPHABET_SIZE][1000];
+    count_frequency(ciphertext, cipher_freq);
+    for (int shift = 0; shift < ALPHABET_SIZE; shift++) {
+        decrypt_with_shift(ciphertext, shift, possible_plaintexts[shift]);
+        double shifted_freq[ALPHABET_SIZE] = {0};
+        count_frequency(possible_plaintexts[shift], shifted_freq);
+        shift_scores[shift] = calculate_score(shifted_freq, english_freq);
+    }
+    for (int i = 0; i < ALPHABET_SIZE - 1; i++) {
+        for (int j = i + 1; j < ALPHABET_SIZE; j++) {
+            if (shift_scores[i] > shift_scores[j]) {
+                double temp_score = shift_scores[i];
+                shift_scores[i] = shift_scores[j];
+                shift_scores[j] = temp_score;
+                char temp_text[1000];
+                strcpy(temp_text, possible_plaintexts[i]);
+                strcpy(possible_plaintexts[i], possible_plaintexts[j]);
+                strcpy(possible_plaintexts[j], temp_text);
+            }
+        }
+    }
+    for (int i = 0; i < top_n && i < ALPHABET_SIZE; i++) {
+        printf("\nPossible plaintext %d (Shift %d):\n%s\n", i + 1, (ALPHABET_SIZE - i) % ALPHABET_SIZE, possible_plaintexts[i]);
+    }
+}
+
+int main() {
+    char ciphertext[1000];
+    int top_n;
+    printf("Enter the ciphertext: ");
+    fgets(ciphertext, sizeof(ciphertext), stdin);
+    printf("Enter the number of top possible plaintexts: ");
+    scanf("%d", &top_n);
+    frequency_attack(ciphertext, top_n);
+
+    return 0;
+}
