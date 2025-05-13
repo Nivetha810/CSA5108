@@ -1,0 +1,58 @@
+
+#include <stdio.h>
+#include <stdint.h>
+#define BLOCK_SIZE 8 
+#define KEY_SIZE 10 
+uint8_t generate_round_key(uint16_t key) {
+    return key & 0xFF; 
+}
+uint8_t sdes_encrypt(uint8_t plaintext, uint8_t round_key) {
+    return plaintext ^ round_key;
+}
+uint8_t sdes_decrypt(uint8_t ciphertext, uint8_t round_key) {
+    return ciphertext ^ round_key;
+}
+uint8_t xor_blocks(uint8_t a, uint8_t b) {
+    return a ^ b;
+}
+void cbc_encrypt(uint8_t *plaintext, int length, uint8_t iv, uint16_t key, uint8_t *ciphertext) {
+    uint8_t round_key = generate_round_key(key); 
+    uint8_t previous = iv; 
+
+    for (int i = 0; i < length; i++) {
+        uint8_t block = xor_blocks(plaintext[i], previous);
+        ciphertext[i] = sdes_encrypt(block, round_key);
+        previous = ciphertext[i];
+    }
+}
+void cbc_decrypt(uint8_t *ciphertext, int length, uint8_t iv, uint16_t key, uint8_t *plaintext) {
+    uint8_t round_key = generate_round_key(key); 
+    uint8_t previous = iv; 
+    for (int i = 0; i < length; i++) {
+        uint8_t decrypted_block = sdes_decrypt(ciphertext[i], round_key);
+        plaintext[i] = xor_blocks(decrypted_block, previous);
+        previous = ciphertext[i];
+    }
+}
+int main() {
+    uint8_t plaintext[] = {0x01, 0x23}; 
+    int plaintext_length = sizeof(plaintext) / sizeof(plaintext[0]);
+    uint16_t key = 0x1FD; 
+    uint8_t iv = 0xAA; 
+    uint8_t ciphertext[plaintext_length];
+    uint8_t decrypted_text[plaintext_length];
+    cbc_encrypt(plaintext, plaintext_length, iv, key, ciphertext);
+    printf("Ciphertext (CBC Mode):\n");
+    for (int i = 0; i < plaintext_length; i++) {
+        printf("%02X ", ciphertext[i]);
+    }
+    printf("\n");
+    cbc_decrypt(ciphertext, plaintext_length, iv, key, decrypted_text);
+    printf("Decrypted Text (CBC Mode):\n");
+    for (int i = 0; i < plaintext_length; i++) {
+        printf("%02X ", decrypted_text[i]);
+    }
+    printf("\n");
+
+    return 0;
+}
