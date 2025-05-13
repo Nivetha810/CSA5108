@@ -1,0 +1,70 @@
+
+#include <stdio.h>
+#include <string.h>
+#define MAX_LEN 100
+void encryptOneTimePad(const char *plaintext, const int *keyStream, int keyLength, char *ciphertext);
+void decryptOneTimePad(const char *ciphertext, const int *keyStream, int keyLength, char *plaintext);
+void findKeyStream(const char *ciphertext, const char *plaintext, int *keyStream, int *keyLength);
+int main() {
+    char plaintext[] = "send more money";
+    int keyStream[] = {9, 0, 1, 7, 23, 15, 21, 14, 11, 11, 2, 8, 9};
+    int keyLength = sizeof(keyStream) / sizeof(keyStream[0]);
+    char ciphertext[MAX_LEN];
+    encryptOneTimePad(plaintext, keyStream, keyLength, ciphertext);
+    printf("Ciphertext: %s\n", ciphertext);
+    char desiredPlaintext[] = "cash not needed";
+    int computedKeyStream[MAX_LEN];
+    int computedKeyLength;
+    findKeyStream(ciphertext, desiredPlaintext, computedKeyStream, &computedKeyLength);
+    printf("Computed Key Stream: ");
+    for (int i = 0; i < computedKeyLength; i++) {
+        printf("%d ", computedKeyStream[i]);
+    }
+    printf("\n");
+    char decryptedText[MAX_LEN];
+    decryptOneTimePad(ciphertext, computedKeyStream, computedKeyLength, decryptedText);
+    printf("Decrypted Text: %s\n", decryptedText);
+
+    return 0;
+}
+
+void encryptOneTimePad(const char *plaintext, const int *keyStream, int keyLength, char *ciphertext) {
+    int len = strlen(plaintext);
+    int keyIndex = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (plaintext[i] >= 'a' && plaintext[i] <= 'z') {
+            int shift = keyStream[keyIndex % keyLength];
+            ciphertext[i] = ((plaintext[i] - 'a' + shift) % 26) + 'a';
+            keyIndex++;
+        } else {
+            ciphertext[i] = plaintext[i]; 
+        }
+    }
+    ciphertext[len] = '\0';  
+}
+void decryptOneTimePad(const char *ciphertext, const int *keyStream, int keyLength, char *plaintext) {
+    int len = strlen(ciphertext);
+    int keyIndex = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (ciphertext[i] >= 'a' && ciphertext[i] <= 'z') {
+            int shift = keyStream[keyIndex % keyLength];
+            plaintext[i] = ((ciphertext[i] - 'a' - shift + 26) % 26) + 'a';
+            keyIndex++;
+        } else {
+            plaintext[i] = ciphertext[i]; 
+        }
+    }
+}
+void findKeyStream(const char *ciphertext, const char *plaintext, int *keyStream, int *keyLength) {
+    int len = strlen(ciphertext);
+    *keyLength = 0;
+    for (int i = 0; i < len; i++) {
+        if (ciphertext[i] >= 'a' && ciphertext[i] <= 'z' && plaintext[i] >= 'a' && plaintext[i] <= 'z') {
+            int shift = (ciphertext[i] - plaintext[i] + 26) % 26;
+            keyStream[*keyLength] = shift;
+            (*keyLength)++;
+        }
+    }
+}
