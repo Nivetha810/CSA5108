@@ -1,0 +1,139 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MATRIX_SIZE 2
+void encryptHillCipher(const char *plaintext, int keyMatrix[MATRIX_SIZE][MATRIX_SIZE], char *ciphertext);
+void decryptHillCipher(const char *ciphertext, int keyMatrix[MATRIX_SIZE][MATRIX_SIZE], char *plaintext);
+void matrixMultiplication(int matrix1[MATRIX_SIZE][MATRIX_SIZE], int matrix2[MATRIX_SIZE][MATRIX_SIZE], int result[MATRIX_SIZE][MATRIX_SIZE]);
+void matrixInverse(int matrix[MATRIX_SIZE][MATRIX_SIZE], int inverseMatrix[MATRIX_SIZE][MATRIX_SIZE]);
+void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE]);
+void preprocessText(const char *text, char *processedText);
+void findKeyMatrix(int plaintextPairs[][MATRIX_SIZE], int ciphertextPairs[][MATRIX_SIZE], int keyMatrix[MATRIX_SIZE][MATRIX_SIZE]);
+int modInverse(int a, int m);
+
+int main() {
+    int plaintextPairs[2][MATRIX_SIZE] = {{0, 1}, {1, 0}};  
+    int ciphertextPairs[2][MATRIX_SIZE] = {{5, 7}, {8, 3}}; 
+    int keyMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    char plaintext[] = "AB"; 
+    char ciphertext[100];
+    char decryptedText[100];
+    findKeyMatrix(plaintextPairs, ciphertextPairs, keyMatrix);
+    printf("Recovered Key Matrix:\n");
+    printMatrix(keyMatrix);
+    encryptHillCipher(plaintext, keyMatrix, ciphertext);
+    printf("Encrypted Text: %s\n", ciphertext);
+    int inverseKeyMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    matrixInverse(keyMatrix, inverseKeyMatrix);
+    decryptHillCipher(ciphertext, inverseKeyMatrix, decryptedText);
+    printf("Decrypted Text: %s\n", decryptedText);
+
+    return 0;
+}
+void preprocessText(const char *text, char *processedText) {
+    int j = 0;
+    for (int i = 0; text[i]; i++) {
+        if (text[i] >= 'A' && text[i] <= 'Z') {
+            processedText[j++] = text[i] - 'A';  
+        }
+    }
+    processedText[j] = '\0';
+}
+void matrixMultiplication(int matrix1[MATRIX_SIZE][MATRIX_SIZE], int matrix2[MATRIX_SIZE][MATRIX_SIZE], int result[MATRIX_SIZE][MATRIX_SIZE]) {
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                result[i][j] += matrix1[i][k] * matrix2[k][j];
+            }
+            result[i][j] %= 26;  
+        }
+    }
+}
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1; 
+}
+void matrixInverse(int matrix[MATRIX_SIZE][MATRIX_SIZE], int inverseMatrix[MATRIX_SIZE][MATRIX_SIZE]) {
+    int determinant = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]) % 26;
+    int invDet = modInverse(determinant, 26);
+
+    if (invDet == -1) {
+        printf("Matrix is not invertible\n");
+        exit(1);
+    }
+    inverseMatrix[0][0] = (matrix[1][1] * invDet) % 26;
+    inverseMatrix[0][1] = (-matrix[0][1] * invDet) % 26;
+    inverseMatrix[1][0] = (-matrix[1][0] * invDet) % 26;
+    inverseMatrix[1][1] = (matrix[0][0] * invDet) % 26;
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            if (inverseMatrix[i][j] < 0) {
+                inverseMatrix[i][j] += 26;  
+            }
+        }
+    }
+}
+void findKeyMatrix(int plaintextPairs[][MATRIX_SIZE], int ciphertextPairs[][MATRIX_SIZE], int keyMatrix[MATRIX_SIZE][MATRIX_SIZE]) {
+    int plainMatrix1[MATRIX_SIZE][MATRIX_SIZE] = { {plaintextPairs[0][0], plaintextPairs[0][1]} };
+    int plainMatrix2[MATRIX_SIZE][MATRIX_SIZE] = { {plaintextPairs[1][0], plaintextPairs[1][1]} };
+    int cipherMatrix1[MATRIX_SIZE][MATRIX_SIZE] = { {ciphertextPairs[0][0], ciphertextPairs[0][1]} };
+    int cipherMatrix2[MATRIX_SIZE][MATRIX_SIZE] = { {ciphertextPairs[1][0], ciphertextPairs[1][1]} };
+    int plainMatrixInverse[MATRIX_SIZE][MATRIX_SIZE];
+    int tempKeyMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    matrixInverse(plainMatrix1, plainMatrixInverse);
+    matrixMultiplication(cipherMatrix1, plainMatrixInverse, tempKeyMatrix);
+    matrixMultiplication(cipherMatrix2, plainMatrixInverse, keyMatrix);
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            keyMatrix[i][j] = (tempKeyMatrix[i][j] % 26 + 26) % 26;
+        }
+    }
+}
+void encryptHillCipher(const char *plaintext, int keyMatrix[MATRIX_SIZE][MATRIX_SIZE], char *ciphertext) {
+    int len = strlen(plaintext);
+    int plainMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    int cipherMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    int j = 0;
+    for (int i = 0; i < len; i += MATRIX_SIZE) {
+        for (int k = 0; k < MATRIX_SIZE; k++) {
+            plainMatrix[k][0] = plaintext[i + k] - 'A';
+        }
+        matrixMultiplication(keyMatrix, plainMatrix, cipherMatrix);
+
+        for (int k = 0; k < MATRIX_SIZE; k++) {
+            ciphertext[j++] = cipherMatrix[k][0] + 'A';
+        }
+    }
+    ciphertext[j] = '\0';
+}
+void decryptHillCipher(const char *ciphertext, int keyMatrix[MATRIX_SIZE][MATRIX_SIZE], char *plaintext) {
+    int len = strlen(ciphertext);
+    int cipherMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    int plainMatrix[MATRIX_SIZE][MATRIX_SIZE];
+    int j = 0;
+    for (int i = 0; i < len; i += MATRIX_SIZE) {
+        for (int k = 0; k < MATRIX_SIZE; k++) {
+            cipherMatrix[k][0] = ciphertext[i + k] - 'A';
+        }
+        matrixMultiplication(keyMatrix, cipherMatrix, plainMatrix);
+        for (int k = 0; k < MATRIX_SIZE; k++) {
+            plaintext[j++] = plainMatrix[k][0] + 'a';
+        }
+    }
+    plaintext[j] = '\0';
+}
+void printMatrix(int matrix[MATRIX_SIZE][MATRIX_SIZE]) {
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
