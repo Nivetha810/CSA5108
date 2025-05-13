@@ -1,0 +1,129 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ALPHABET_SIZE 26
+
+
+const double english_freq[ALPHABET_SIZE] = {
+    8.12,  
+    1.49,
+    2.71,  
+    4.32, 
+    12.02, 
+    2.30,  
+    2.03,  
+    5.92,  
+    7.31, 
+    0.10,  
+    0.69,  
+    3.98,  
+    2.61,  
+    6.95,  
+    7.68, 
+    1.82,  
+    0.11,  
+    6.02, 
+    6.28,  
+    9.10, 
+    2.88,  
+    1.11,  
+    2.09,  
+    0.17,  
+    2.11, 
+    0.07   
+};
+
+
+typedef struct {
+    char letter;
+    double frequency;
+} LetterFrequency;
+
+
+void count_frequency(const char* ciphertext, LetterFrequency freq[]) {
+    int total_letters = 0;
+
+   
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i].letter = 'A' + i;
+        freq[i].frequency = 0;
+    }
+
+  
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        char c = ciphertext[i];
+        if (c >= 'A' && c <= 'Z') {
+            freq[c - 'A'].frequency++;
+            total_letters++;
+        } else if (c >= 'a' && c <= 'z') {
+            freq[c - 'a'].frequency++;
+            total_letters++;
+        }
+    }
+
+    
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        freq[i].frequency = (freq[i].frequency / total_letters) * 100;
+    }
+}
+
+
+void sort_frequency(LetterFrequency freq[]) {
+    for (int i = 0; i < ALPHABET_SIZE - 1; i++) {
+        for (int j = i + 1; j < ALPHABET_SIZE; j++) {
+            if (freq[i].frequency < freq[j].frequency) {
+                LetterFrequency temp = freq[i];
+                freq[i] = freq[j];
+                freq[j] = temp;
+            }
+        }
+    }
+}
+void decrypt_with_mapping(const char* ciphertext, const LetterFrequency cipher_freq[], const LetterFrequency english_freq[], int n) {
+    char mapping[ALPHABET_SIZE];
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        mapping[cipher_freq[i].letter - 'A'] = english_freq[i].letter;
+    }
+
+    printf("\nDecrypted text %d:\n", n);
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        char c = ciphertext[i];
+        if (c >= 'A' && c <= 'Z') {
+            printf("%c", mapping[c - 'A']);
+        } else if (c >= 'a' && c <= 'z') {
+            printf("%c", mapping[c - 'a'] + 32);  
+        } else {
+            printf("%c", c);  
+        }
+    }
+    printf("\n");
+}
+
+int main() {
+    char ciphertext[1000];
+    int top_n;
+    printf("Enter the ciphertext: ");
+    fgets(ciphertext, sizeof(ciphertext), stdin);
+
+    printf("Enter the number of top possible plaintexts: ");
+    scanf("%d", &top_n);
+
+    LetterFrequency cipher_freq[ALPHABET_SIZE];
+    LetterFrequency english_letter_freq[ALPHABET_SIZE];
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        english_letter_freq[i].letter = 'A' + i;
+        english_letter_freq[i].frequency = english_freq[i];
+    }
+
+    count_frequency(ciphertext, cipher_freq);
+
+    sort_frequency(cipher_freq);
+    sort_frequency(english_letter_freq);
+    for (int i = 0; i < top_n && i < ALPHABET_SIZE; i++) {
+        decrypt_with_mapping(ciphertext, cipher_freq, english_letter_freq, i + 1);
+    }
+
+    return 0;
+}
